@@ -1,0 +1,62 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract AdvancedSmartContract {
+    address private owner;
+    uint256 private data;
+    mapping(address => bool) private authorizedUsers;
+
+    event DataUpdated(uint256 newData);
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+    event UserAuthorized(address user);
+    event UserRevoked(address user);
+
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Only the contract owner can call this function");
+        _;
+    }
+
+    modifier onlyAuthorized() {
+        require(authorizedUsers[msg.sender], "Caller is not authorized");
+        _;
+    }
+
+    constructor(uint256 initialData) {
+        owner = msg.sender;
+        data = initialData;
+        authorizedUsers[msg.sender] = true;
+    }
+
+    function transferOwnership(address newOwner) external onlyOwner {
+        require(newOwner != address(0), "Invalid new owner address");
+        emit OwnershipTransferred(owner, newOwner);
+        owner = newOwner;
+    }
+
+    function authorizeUser(address user) external onlyOwner {
+        require(user != address(0), "Invalid user address");
+        require(!authorizedUsers[user], "User is already authorized");
+        authorizedUsers[user] = true;
+        emit UserAuthorized(user);
+    }
+
+    function revokeAuthorization(address user) external onlyOwner {
+        require(authorizedUsers[user], "User is not authorized");
+        authorizedUsers[user] = false;
+        emit UserRevoked(user);
+    }
+
+    function updateData(uint256 newData) external onlyAuthorized {
+        require(newData != data, "New data must be different from current data");
+        data = newData;
+        emit DataUpdated(newData);
+    }
+
+    function getData() external view returns (uint256) {
+        return data;
+    }
+
+    function getContractBalance() external view returns (uint256) {
+        return address(this).balance;
+    }
+}
