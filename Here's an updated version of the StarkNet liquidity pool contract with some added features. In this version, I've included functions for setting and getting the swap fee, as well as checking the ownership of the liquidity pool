@@ -1,0 +1,59 @@
+import starknet;
+
+contract LiquidityPool {
+    starknet.StorageSlot!({owner: felt, user: felt, tokenA_balance: felt, tokenB_balance: felt, swapFee: felt});
+
+    public (user: felt) func initialize() {
+        // Initialize the contract
+        self.storage.owner = tx.origin;
+        self.storage.user = tx.origin;
+        self.storage.tokenA_balance = 0;
+        self.storage.tokenB_balance = 0;
+        self.storage.swapFee = 1; // Default swap fee is 1%
+    }
+
+    public () func setSwapFee(fee: felt) {
+        // Set the swap fee, e.g., fee = 1 for 1%
+        assert(self.storage.user == tx.origin || self.storage.owner == tx.origin, "Not authorized");
+        self.storage.swapFee = fee;
+    }
+
+    public (fee: felt) view func getSwapFee() -> felt {
+        // Get the current swap fee
+        return self.storage.swapFee;
+    }
+
+    public (tokenA_amount: felt, tokenB_amount: felt) func addLiquidity(tokenA_amount: felt, tokenB_amount: felt) {
+        // Add liquidity
+        self.storage.tokenA_balance += tokenA_amount;
+        self.storage.tokenB_balance += tokenB_amount;
+    }
+
+    public (tokenA_amount: felt, tokenB_amount: felt) func removeLiquidity() {
+        // Remove liquidity
+        assert(self.storage.user == tx.origin, "Not the liquidity provider");
+        let tokenA_amount = self.storage.tokenA_balance;
+        let tokenB_amount = self.storage.tokenB_balance;
+        self.storage.tokenA_balance = 0;
+        self.storage.tokenB_balance = 0;
+    }
+
+    public (tokenA_balance: felt, tokenB_balance: felt) view func getLiquidity() -> (felt, felt) {
+        // Get current liquidity
+        return (self.storage.tokenA_balance, self.storage.tokenB_balance);
+    }
+
+    public (tokenB_received: felt) func swapTokenAForTokenB(tokenA_amount: felt) {
+        // Swap token A for token B
+        assert(self.storage.tokenA_balance >= tokenA_amount, "Insufficient liquidity");
+        let tokenB_amount = calculateSwapAmount(tokenA_amount);
+        self.storage.tokenA_balance -= tokenA_amount;
+        self.storage.tokenB_balance += tokenB_amount;
+    }
+
+    private (tokenB_amount: felt) func calculateSwapAmount(tokenA_amount: felt) -> felt {
+        // Calculate the amount of token B to be received, considering the swap fee
+        let feeMultiplier = 100 + self.storage.swapFee; // e.g., 101 for 1% fee
+        return (tokenA_amount * feeMultiplier) / 100;
+    }
+}
